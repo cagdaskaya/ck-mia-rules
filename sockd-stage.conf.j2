@@ -1,0 +1,464 @@
+### DANTE STAGE CONFIG ###
+
+## Server configuration, which should be placed in a file readable by the server, typically as /etc/sockd.conf.
+
+#logging
+errorlog: syslog /var/log/sockd.errlog
+logoutput: syslog /var/log/sockd.log
+#debug: 2
+
+#server address specification
+internal: {{ sockd_internal }} port = {{ sockd_port }}
+external: {{ sockd_external }}
+
+#server identities (not needed on solaris)
+#user.privileged: root
+user.notprivileged: sockd
+#user.libwrap: libwrap
+
+#reverse dns lookup
+#srchost: nodnsmismatch
+
+#authentication methods
+clientmethod: none
+socksmethod: none
+
+##
+## SOCKS client access rules
+##
+#rule processing stops at the first match, no match results in blocking
+
+#block access to socks server from 192.0.2.22 (exception for pass rule below)
+# client block {
+#       #block connections from 192.0.2.22/32
+#       from: 192.0.2.22/24 to: 0.0.0.0/0
+#       log: error connect # disconnect
+# }
+
+#allow connections from cdpvdc-bri (10.234.14.0/24)
+client pass {
+        from: 10.234.14.0/24 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from cdpvdc-slo (10.234.78.0/24)
+client pass {
+        from: 10.234.78.0/24 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from skynet-stg-bri
+client pass {
+        from: 10.234.32.0/25 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from skynet-stg-slo
+client pass {
+        from: 10.234.97.0/25 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from vso-uk-stg-slo
+client pass {
+        from: 10.234.99.0/25 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from tsf-stg-bri
+client pass {
+        from: 10.234.31.64/27 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from tsf-stg-slo
+client pass {
+        from: 10.234.104.64/27 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from gcd-mia-stg-bri
+client pass {
+        from: 10.234.33.184/29 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from gcd-mia-stg-slo
+client pass {
+        from: 10.234.99.184/29 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from gcd-vodcm-stg-bri
+client pass {
+        from: 10.234.31.112/28 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+#allow connections from gcd-vodcm-stg-slo
+client pass {
+        from: 10.234.104.112/28 to: 0.0.0.0/0
+        log: error # connect disconnect
+}
+
+##
+## SOCKS command rules
+##
+#rule processing stops at the first match, no match results in blocking
+
+#block communication with www.example.org
+# socks block {
+#        from: 0.0.0.0/0 to: www.example.org
+#        command: bind connect udpassociate
+#        log: error connect # disconnect iooperation
+# }
+
+#pass access to centos.org domain
+socks pass {
+        from: 0.0.0.0/0 to: .centos.org
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to opsview.com domain
+socks pass {
+        from: 0.0.0.0/0 to: .opsview.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to bllab.uk domain
+socks pass {
+        from: 0.0.0.0/0 to: .bllab.uk
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to bskyb.com domain
+socks pass {
+        from: 0.0.0.0/0 to: .bskyb.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to GCD aws elastic cache registry, api, s3 in eu-west-1/2
+socks pass {
+        from: 0.0.0.0/0 to: .amazonaws.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to hooks.slack.com
+socks pass {
+        from: 0.0.0.0/0 to: .slack.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to repos.influxdata.com
+socks pass {
+        from: 0.0.0.0/0 to: .influxdata.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to yum.cdn.comcast.net
+socks pass {
+        from: 0.0.0.0/0 to: .comcast.net
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to nginx.org
+socks pass {
+        from: 0.0.0.0/0 to: .nginx.org
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to download.docker.com
+socks pass {
+        from: 0.0.0.0/0 to: .docker.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass access to CAG alerting EP
+socks pass {
+        from: 0.0.0.0/0 to: .alerting.monitoringsolutions.sky
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+
+## BG or VM specific access control rules below
+#pass cdpvdc-bri access to TS-EP portal-api.touchstream.global
+socks pass {
+        from: 10.234.14.0/24 to: .touchstream.global
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to TS-EP portal-api.touchstream.global
+socks pass {
+        from: 10.234.78.0/24 to: .touchstream.global
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to Merlin domain
+socks pass {
+        from: 10.234.14.0/24 to: .codebig2.net
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to Merlin domain
+socks pass {
+        from: 10.234.78.0/24 to: .codebig2.net
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to Media-ds domain
+socks pass {
+        from: 10.234.14.0/24 to: .theplatform.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to Media-ds domain
+socks pass {
+        from: 10.234.78.0/24 to: .theplatform.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to gz-vq_EP
+socks pass {
+        from: 10.234.14.0/24 to: uk.imageservice.sky.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to gz-vq_EP
+socks pass {
+        from: 10.234.78.0/24 to: uk.imageservice.sky.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to csi-vq_EP
+socks pass {
+        from: 10.234.14.0/24 to: imageservice.disco.peacocktv.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to csi-vq_EP
+socks pass {
+        from: 10.234.78.0/24 to: imageservice.disco.peacocktv.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to Ansible-webhook galaxy.ansible.com
+socks pass {
+        from: 10.234.14.0/24 to: .ansible.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to Ansible-webhook galaxy.ansible.com
+socks pass {
+        from: 10.234.78.0/24 to: .ansible.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-bri access to lcm-api
+socks pass {
+        from: 10.234.14.0/24 to: lcm-internal-gtm.ovp.prod.ott.sky
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-slo access to lcm-api
+socks pass {
+        from: 10.234.78.0/24 to: lcm-internal-gtm.ovp.prod.ott.sky
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-bri access to lcm-api
+socks pass {
+        from: 10.234.31.64/27 to: lcm-internal-gtm.ovp.prod.ott.sky
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-slo access to lcm-api
+socks pass {
+        from: 10.234.104.64/27 to: lcm-internal-gtm.ovp.prod.ott.sky
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri access to github domain
+socks pass {
+        from: 10.234.14.1/32 to: .github.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo access to github domain
+socks pass {
+        from: 10.234.78.6/32 to: .github.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri access to git-repo-sky
+socks pass {
+        from: 10.234.14.1/32 to: git.bskyb.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo access to git-repo-sky
+socks pass {
+        from: 10.234.78.6/32 to: git.bskyb.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri access to plugins.jenkins.io
+socks pass {
+        from: 10.234.14.1/32 to: .jenkins.io
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo access to plugins.jenkins.io
+socks pass {
+        from: 10.234.78.6/32 to: .jenkins.io
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri ssh access to sn-<ec/mc/tr>-<bllon/hobir/enlba/enslo>
+socks pass {
+        from: 10.234.14.1/32 to: 93.96.224.0/23 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo ssh access to sn-<ec/mc/tr>-<bllon/hobir/enlba/enslo>
+socks pass {
+        from: 10.234.78.6/32 to: 93.96.224.0/23 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri ssh access to sn-<ec/mc>-<blstg|bllab>
+socks pass {
+        from: 10.234.14.1/32 to: 176.255.190.0/24 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo ssh access to sn-<ec/mc>-<blstg|bllab>
+socks pass {
+        from: 10.234.78.6/32 to: 176.255.190.0/24 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-bri ssh access to sn-tr-<blstg|bllab>
+socks pass {
+        from: 10.234.14.1/32 to: 176.255.212.0/23 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass cdpvdc-jenkins-slo ssh access to sn-tr-<blstg|bllab>
+socks pass {
+        from: 10.234.78.6/32 to: 176.255.212.0/23 port: 22
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-bri access to epgsrv-test01, epgcol-webecs, epgese-webecs, epg-webecs-dr
+socks pass {
+        from: 10.234.31.64/27 to: .sky.local
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 192.168.169.58/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 192.168.169.191/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 10.207.121.110/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 10.213.20.55/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 10.220.1.56/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.31.64/27 to: 10.207.40.46/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-slo access to epgsrv-test01, epgcol-webecs, epgese-webecs, epg-webecs-dr
+socks pass {
+        from: 10.234.104.64/27 to: .sky.local
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 192.168.169.58/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 192.168.169.191/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 10.207.121.110/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 10.213.20.55/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 10.220.1.56/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+socks pass {
+        from: 10.234.104.64/27 to: 10.207.40.46/32
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-bri access to TS-EP portal-api.touchstream.global
+socks pass {
+        from: 10.234.31.64/27 to: .touchstream.global
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-slo access to TS-EP portal-api.touchstream.global
+socks pass {
+        from: 10.234.104.64/27 to: .touchstream.global
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-bri access to Merlin domain
+socks pass {
+        from: 10.234.31.64/27 to: .codebig2.net
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-slo access to Merlin domain
+socks pass {
+        from: 10.234.104.64/27 to: .codebig2.net
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-bri access to Media-ds domain
+socks pass {
+        from: 10.234.31.64/27 to: .theplatform.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+#pass tsf-stg-slo access to Media-ds domain
+socks pass {
+        from: 10.234.104.64/27 to: .theplatform.com
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
+
+
+#block incoming connections/packets from ftp.example.org
+# socks block {
+#        from: ftp.example.org to: 0.0.0.0/0
+#        command: bindreply udpreply
+#        log: error connect # disconnect iooperation
+# }
+
+#generic pass statement for incoming connections/packets
+socks pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        command: bindreply udpreply
+        log: error connect # disconnect iooperation
+}
