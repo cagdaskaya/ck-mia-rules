@@ -45,8 +45,7 @@ def update_contents(template:str):
     response = requests.get(url, headers=headers).text
     with open(template, 'w') as f:
         f.write(response)
-    with open(template, 'r') as f:
-        return [i.strip() for i in f.readlines()]
+    return [i.strip() for i in response.split('\n')]
 
 def squid_acl_check(acl, conf):
     acl_facts = {}
