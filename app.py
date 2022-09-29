@@ -88,7 +88,7 @@ def dante_rule_check(conf):
     client_rules = []
     socks_rules = []
     for x, i in enumerate(conf):
-        if (i.count('pass {') or i.count('block: {')) and not i.startswith('#'):
+        if (i.count('pass {') or i.count('block {')) and not i.startswith('#'):
             src_net = conf[x+1].split('from: ')[1].split(' ')[0]
             src_bg = [bg for bg, net in VDC_NETS.items() if ip_network(src_net, strict=False).subnet_of(ip_network(net))]
             dst_net = conf[x+1].split('to: ')[1].split(' ')[0]

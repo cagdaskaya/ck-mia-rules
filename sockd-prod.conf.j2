@@ -28,13 +28,6 @@ socksmethod: none
 ##
 #rule processing stops at the first match, no match results in blocking
 
-#block access to socks server from 192.0.2.22 (exception for pass rule below)
-# client block {
-#       #block connections from 192.0.2.22/32
-#       from: 192.0.2.22/24 to: 0.0.0.0/0
-#       log: error connect # disconnect
-# }
-
 #allow connections from cdpvdc-bri (10.234.14.0/24)
 client pass {
         from: 10.234.14.0/24 to: 0.0.0.0/0
@@ -90,18 +83,16 @@ client pass {
         from: 10.234.104.96/28 to: 0.0.0.0/0
         log: error # connect disconnect
 }
+#explicit catch-all rule to log denied client connections
+client block {
+      from: 0.0.0.0/0 to: 0.0.0.0/0
+      log: error connect # disconnect
+}
 
 ##
 ## SOCKS command rules
 ##
 #rule processing stops at the first match, no match results in blocking
-
-#block communication with www.example.org
-# socks block {
-#        from: 0.0.0.0/0 to: www.example.org
-#        command: bind connect udpassociate
-#        log: error connect # disconnect iooperation
-# }
 
 #pass access to centos.org domain
 socks pass {
@@ -447,14 +438,12 @@ socks pass {
         command: bind connect udpassociate
         log: error connect # disconnect iooperation
 }
-
-
-#block incoming connections/packets from ftp.example.org
-# socks block {
-#        from: ftp.example.org to: 0.0.0.0/0
-#        command: bindreply udpreply
-#        log: error connect # disconnect iooperation
-# }
+#explicit catch-all rule to log outgoing blocked connections/packets
+socks block {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        command: bind connect udpassociate
+        log: error connect # disconnect iooperation
+}
 
 #generic pass statement for incoming connections/packets
 socks pass {
