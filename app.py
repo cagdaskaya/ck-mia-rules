@@ -53,22 +53,17 @@ def update_contents(template:str):
 
 def squid_acl_check(acl, conf):
     acl_facts = {}
-    if acl != 'all' and not acl.startswith('!'):
-        acl_find = [ i for i in conf if i.startswith('acl ' + acl + ' ')]
+    if acl != 'all':
+        if acl.startswith('!'):
+            acl_find = [ i for i in conf if i.startswith(f'acl {acl[1:]} ')]
+            acl_facts['tags'] = 'not'
+        else:
+            acl_find = [ i for i in conf if i.startswith(f'acl {acl} ')]
         acl_facts['name'] = acl_find[0].split(' ')[1]
         acl_facts['type'] = acl_find[0].split(' ')[2]
         acl_facts['vals'] = [i.split(' ')[3:] for i in acl_find]
-    elif acl.startswith('!'):
-        acl_find = [ i for i in conf if i.startswith('acl ' + acl[1:] + ' ')]
-        acl_facts['name'] = acl_find[0].split(' ')[1]
-        acl_facts['type'] = acl_find[0].split(' ')[2]
-        acl_facts['vals'] = [i.split(' ')[3:] for i in acl_find]
-        acl_facts['tags'] = 'not'
     else:
-        acl_facts['name'] = 'all'
-        acl_facts['type'] = 'both'
-        acl_facts['vals'] = 'any'
-        acl_facts['tags'] = 'all'
+        acl_facts = {'name': 'all', 'type': 'both', 'vals': 'any', 'tags': 'all'}
     return acl_facts
 
 def squid_rule_check(conf):
