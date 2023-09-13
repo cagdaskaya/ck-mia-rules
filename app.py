@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect
+from flask import Flask, render_template  # request, url_for, redirect
 from ipaddress import ip_network
 import requests
 from decouple import config
@@ -35,12 +35,16 @@ VDC_NETS = {
     'vso-stg-slo': '10.234.99.0/25'
 }
 
-def update_contents(template:str):
+
+def update_contents(template: str):
     if template.startswith('squid'):
         shim = 'squid'
     elif template.startswith('sockd'):
         shim = 'dante'
-    url = f'https://api.github.com/repos/sky-uk/gcd-mia/contents/roles/{shim}/templates/{template}'
+    url = (
+        'https://api.github.com/repos/sky-uk/gcd-mia/'
+        f'contents/roles/{shim}/templates/{template}'
+    )
     token = config('GIT_TOKEN')
     headers = {
         'Accept': 'application/vnd.github.v3.raw',
@@ -51,25 +55,32 @@ def update_contents(template:str):
         f.write(response)
     return [i.strip() for i in response.split('\n')]
 
+
 def squid_acl_check(acl, conf):
     acl_facts = {}
     if acl != 'all':
         if acl.startswith('!'):
-            acl_find = [ i for i in conf if i.startswith(f'acl {acl[1:]} ')]
+            acl_find = [i for i in conf if i.startswith(f'acl {acl[1:]} ')]
             acl_facts['tags'] = 'not'
         else:
-            acl_find = [ i for i in conf if i.startswith(f'acl {acl} ')]
+            acl_find = [i for i in conf if i.startswith(f'acl {acl} ')]
         acl_facts['name'] = acl_find[0].split(' ')[1]
         acl_facts['type'] = acl_find[0].split(' ')[2]
         acl_facts['vals'] = [i.split(' ')[3:] for i in acl_find]
     else:
-        acl_facts = {'name': 'all', 'type': 'both', 'vals': 'any', 'tags': 'all'}
+        acl_facts = {
+            'name': 'all', 'type': 'both', 'vals': 'any', 'tags': 'all'
+        }
     return acl_facts
 
+
 def squid_rule_check(conf):
-    squid_rules = [dict(action=i.split(' ')[1].upper(), acls=i.split(' ')[2:]) for i in conf
-        if i.startswith('http_access') 
-        if not i.count(' manager') 
+    squid_rules = [
+        dict(
+            action=i.split(' ')[1].upper(),
+            acls=i.split(' ')[2:]) for i in conf
+        if i.startswith('http_access')
+        if not i.count(' manager')
         if not i.count('localhost'.lower())
         if not i.count(' CONNECT ')
     ]
@@ -83,13 +94,17 @@ def squid_rule_check(conf):
                 rule['dst_port'] = squid_acl_check(acl, conf)
     return squid_rules
 
+
 def dante_rule_check(conf):
     client_rules = []
     socks_rules = []
     for x, i in enumerate(conf):
         if (i.count('pass {') or i.count('block {')) and not i.startswith('#'):
             src_net = conf[x+1].split('from: ')[1].split(' ')[0]
-            src_bg = [bg for bg, net in VDC_NETS.items() if ip_network(src_net, strict=False).subnet_of(ip_network(net))]
+            src_bg = [
+                bg for bg, net in VDC_NETS.items() if ip_network(
+                    src_net, strict=False).subnet_of(ip_network(net))
+            ]
             dst_net = conf[x+1].split('to: ')[1].split(' ')[0]
             if i.startswith('socks'):
                 socks_rules.append(dict())
@@ -104,7 +119,9 @@ def dante_rule_check(conf):
                     socks_rules[s]['SRC'] = f'{src_net}'
                 socks_rules[s]['DST'] = dst_net
                 if conf[x+1].count('port: '):
-                    socks_rules[s]['DST_port'] = conf[x+1].split('port: ')[1].split(' ')[0]
+                    socks_rules[s]['DST_port'] = (
+                        conf[x+1].split('port: ')[1].split(' ')[0]
+                    )
                 else:
                     socks_rules[s]['DST_port'] = 'ANY'
                 if conf[x+2].count('command: '):
@@ -122,38 +139,55 @@ def dante_rule_check(conf):
                     client_rules[c]['SRC'] = f'{src_net}'
                 client_rules[c]['DST'] = dst_net
                 if conf[x+1].count('port: '):
-                    client_rules[c]['DST_port'] = conf[x+1].split('port: ')[1].split(' ')[0]
+                    client_rules[c]['DST_port'] = (
+                        conf[x+1].split('port: ')[1].split(' ')[0]
+                    )
                 else:
                     client_rules[c]['DST_port'] = 'ANY'
     return (socks_rules, client_rules)
+
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
+
 @app.route('/squid/prd')
 def squid_prd_func():
     squid_prd_conf = update_contents('squid-prod.conf.j2')
     squid_prd_rules = squid_rule_check(squid_prd_conf)
-    return render_template('squid_prd.html', squid_prd_rules=squid_prd_rules, enumerate=enumerate)
+    return render_template(
+        'squid_prd.html', squid_prd_rules=squid_prd_rules, enumerate=enumerate
+    )
+
 
 @app.route('/squid/stg')
 def squid_stg_func():
     squid_stg_conf = update_contents('squid-stage.conf.j2')
     squid_stg_rules = squid_rule_check(squid_stg_conf)
-    return render_template('squid_stg.html', squid_stg_rules=squid_stg_rules, enumerate=enumerate)
+    return render_template(
+        'squid_stg.html', squid_stg_rules=squid_stg_rules, enumerate=enumerate
+    )
+
 
 @app.route('/dante/prd')
 def dante_prd_func():
     dante_prd_conf = update_contents('sockd-prod.conf.j2')
     (socks_prd_rules, client_prd_rules) = dante_rule_check(dante_prd_conf)
-    return render_template('dante_prd.html', socks_prd_rules=socks_prd_rules, client_prd_rules=client_prd_rules, enumerate=enumerate)
+    return render_template(
+        'dante_prd.html', socks_prd_rules=socks_prd_rules,
+        client_prd_rules=client_prd_rules, enumerate=enumerate
+    )
+
 
 @app.route('/dante/stg')
 def dante_stg_func():
     dante_stg_conf = update_contents('sockd-stage.conf.j2')
     (socks_stg_rules, client_stg_rules) = dante_rule_check(dante_stg_conf)
-    return render_template('dante_stg.html', socks_stg_rules=socks_stg_rules, client_stg_rules=client_stg_rules, enumerate=enumerate)
+    return render_template(
+        'dante_stg.html', socks_stg_rules=socks_stg_rules,
+        client_stg_rules=client_stg_rules, enumerate=enumerate
+    )
 
 
 if __name__ == '__main__':
