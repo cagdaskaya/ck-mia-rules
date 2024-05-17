@@ -86,7 +86,7 @@ def squid_rule_check(conf):
         if i.startswith('http_access')
         if not i.count(' manager')
         if not i.count('localhost'.lower())
-        if not i.count(' CONNECT ')
+        # if not i.count(' CONNECT ')
     ]
     for rule in squid_rules:
         for acl in rule['acls']:
@@ -96,6 +96,8 @@ def squid_rule_check(conf):
                 rule['dst'] = squid_acl_check(acl, conf)
             if squid_acl_check(acl, conf)['type'].startswith('port'):
                 rule['dst_port'] = squid_acl_check(acl, conf)
+            if squid_acl_check(acl, conf)['type'].startswith('method'):
+                rule['http_method'] = squid_acl_check(acl, conf)
     return squid_rules
 
 
