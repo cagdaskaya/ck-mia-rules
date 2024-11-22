@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% from 'macros.html' import render_dante_rule %}
 {% block content %}
   
 <div class="lead container-fluid">
@@ -15,19 +15,12 @@
         <th scope="col">SRC</th>
         <th scope="col">DST</th>
         <th scope="col">DST_port</th>
-        <th scope="col">Description</th>
+        <th scope="col">Command</th>
       </tr>
     </thead>
     <tbody>
       {% for x, i in enumerate(client_stg_rules) %}
-        <tr>
-          <td> {{ x + 1 }} </td>
-          <td> {{ i['action'] }} </td>
-          <td> {{ i['SRC'] }} </td>
-          <td> {{ i['DST'] }} </td>
-          <td> {{ i['DST_port'] }} </td>
-          <td>  </td>
-        </tr>
+        {{ render_dante_rule(i, x) }}
       {% endfor %}
     </tbody>
   </table>
@@ -46,19 +39,12 @@
         <th scope="col">SRC</th>
         <th scope="col">DST</th>
         <th scope="col">DST_port</th>
-        <th scope="col">Description</th>
+        <th scope="col">Command</th>
       </tr>
     </thead>
     <tbody>
       {% for x, i in enumerate(socks_stg_rules) %}
-        <tr>
-          <td> {{ x + 1 }} </td>
-          <td> {{ i['action'] }} </td>
-          <td> {{ i['SRC'] }} </td>
-          <td> {{ i['DST'] }} </td>
-          <td> {{ i['DST_port'] }} </td>
-          <td> {{ i['command'] }} </td>
-        </tr>
+        {{ render_dante_rule(i, x) }}
       {% endfor %}
     </tbody>
   </table>

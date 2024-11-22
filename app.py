@@ -2,6 +2,7 @@ from flask import Flask, render_template  # request, url_for, redirect
 from ipaddress import ip_network
 import requests
 from decouple import config
+import re
 
 
 app = Flask(__name__)
@@ -168,6 +169,74 @@ def dante_rule_check(conf):
     return (socks_rules, client_rules)
 
 
+def parse_dante_config(file_path):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+
+    serialized_rules = []
+    current_rule = []
+
+    # Step 1: Serialize multiline rules into one-liners
+    for line in lines:
+        line = line.strip()
+        if (not line or line.startswith("#")):
+            continue  # Skip empty lines, comments etc..
+        if line.endswith("{"):
+            current_rule = [line]
+        elif line.endswith("}"):
+            current_rule.append(line)
+            serialized_rules.append(" ".join(current_rule))
+            current_rule = []
+        elif current_rule:
+            current_rule.append(line)
+    parsed_rules = []
+
+    # Step 2: Parse serialized rules
+    for rule in serialized_rules:
+        # rule_type = "client" if "client" in rule else "socks"
+        rule_type = "client" if rule.startswith("client") else (
+            "socks" if rule.startswith("socks") else None
+        )
+        if rule_type:
+            if " pass " in rule:
+                action = "ALLOW"
+            elif " block " in rule:
+                action = "DENY"
+            else:
+                action = None
+            from_matches = re.search(
+                r'from:\s+([^}]+?)\s+(to:|port:|command:|log:|})', rule
+            )
+            to_matches = re.search(
+                r'to:\s+([^}]+?)\s+(from:|port:|command:|log:|})', rule
+            )
+            port_matches = re.search(
+                r'port:\s+([^}]+?)\s+(from:|to:|command:|log:|})', rule
+            )
+            command_matches = re.search(
+                r'command:\s+([^}]+?)\s+(from:|to:|port:|log:|})', rule
+            )
+            from_list = from_matches.group(1).split() if from_matches else []
+            to_list = to_matches.group(1).split() if to_matches else []
+            port = port_matches.group(1).split() if port_matches else ["ANY"]
+            command = command_matches.group(1).split() if command_matches else None
+            print(f'port: {port}')
+            print(f'command: {command}')
+            print(f'from: {from_list}')
+
+            # Create a dictionary for each rule
+            parsed_rules.append({
+                "type": rule_type,
+                "action": action,
+                "SRC": from_list,
+                "DST": to_list,
+                "DST_port": port,
+                "command": command,
+            })
+
+    return parsed_rules
+
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -201,13 +270,30 @@ def dante_prd_func():
     )
 
 
-@app.route('/dante/stg')
+# @app.route('/dante/stg')
+# def dante_stg_func():
+#     dante_stg_conf = update_contents('sockd-stage.conf.j2')
+#     (socks_stg_rules, client_stg_rules) = dante_rule_check(dante_stg_conf)
+#     return render_template(
+#         'dante_stg.html', socks_stg_rules=socks_stg_rules,
+#         client_stg_rules=client_stg_rules, enumerate=enumerate
+#     )
+
+
+@app.route('/dante-stg')
 def dante_stg_func():
-    dante_stg_conf = update_contents('sockd-stage.conf.j2')
-    (socks_stg_rules, client_stg_rules) = dante_rule_check(dante_stg_conf)
+    # Parse the configuration file
+    parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
+
+    # Separate SOCKS and client rules
+    socks_rules = [rule for rule in parsed_rules if rule["type"] == "socks"]
+    client_rules = [rule for rule in parsed_rules if rule["type"] == "client"]
+
     return render_template(
-        'dante_stg.html', socks_stg_rules=socks_stg_rules,
-        client_stg_rules=client_stg_rules, enumerate=enumerate
+        'dante_stg.html',
+        socks_stg_rules=socks_rules,
+        client_stg_rules=client_rules,
+        enumerate=enumerate
     )
 
 

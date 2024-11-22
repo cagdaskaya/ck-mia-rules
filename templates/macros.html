@@ -1,4 +1,4 @@
-{% macro render_section(section, index, type, expanded=False) %}
+{% macro render_squid(section, index, type, expanded=False) %}
 <div id="accordion" role="tablist">
   <div class="card">
     <div class="card-header" role="tab" id="heading{{ type }}{{ index }}">
@@ -29,21 +29,67 @@
 </div>
 {% endmacro %}
 
-{% macro render_rule(rule, index) %}
+{% macro render_squid_rule(rule, index) %}
 <tr>
   <td scope="row">{{ index + 1 }}</td>
   <th scope="row">{{ rule['action'] }}</th>
   <td>
-    {{ render_section(rule.get('src', {}), index, 'Src') }}
+    {{ render_squid(rule.get('src', {}), index, 'Src') }}
   </td>
   <td>
-    {{ render_section(rule.get('dst', {}), index, 'Dst') }}
+    {{ render_squid(rule.get('dst', {}), index, 'Dst') }}
   </td>
   <td>
-    {{ render_section(rule.get('dst_port', {}), index, 'DstPort') }}
+    {{ render_squid(rule.get('dst_port', {}), index, 'DstPort') }}
   </td>
   <td>
-    {{ render_section(rule.get('http_method', {}), index, 'HttpMethod') }}
+    {{ render_squid(rule.get('http_method', {}), index, 'HttpMethod') }}
+  </td>
+</tr>
+{% endmacro %}
+
+{% macro render_dante(section, index, type, expanded=False) %}
+<div id="accordion" role="tablist">
+  <div class="card">
+    <div class="card-header" role="tab" id="heading{{ type }}{{ index }}">
+      <h5 class="mb-0">
+        <a data-toggle="collapse" href="#collapse{{ type }}{{ index }}" aria-expanded="{{ 'true' if expanded else 'false' }}" aria-controls="collapse{{ type }}{{ index }}">
+          {% if section %}
+            {{ section[0] }}
+          {% else %}
+            RULE
+          {% endif %}
+        </a>
+      </h5>
+    </div>
+    <div id="collapse{{ type }}{{ index }}" class="collapse{% if expanded %} show{% endif %}" role="tabpanel" aria-labelledby="heading{{ type }}{{ index }}">
+      <div class="card-body">
+        {% if section %}
+          {% for value in section %}
+            {{ "".join(value) }}<br>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro render_dante_rule(rule, index) %}
+<tr>
+  <td scope="row">{{ index + 1 }}</td>
+  <th scope="row">{{ rule['action'] }}</th>
+  <td>
+    {{ render_dante(rule.get('SRC', {}), index, 'Src') }}
+  </td>
+  <td>
+    {{ render_dante(rule.get('DST', {}), index, 'Dst') }}
+  </td>
+  <td>
+    {{ render_dante(rule.get('DST_port', {}), index, 'DstPort') }}
+  </td>
+  <td>
+    {{ render_dante(rule.get('command', {}), index, 'Command') }}
   </td>
 </tr>
 {% endmacro %}
