@@ -68,9 +68,14 @@ def squid_acl_check(acl, conf):
             acl_facts['tags'] = 'not'
         else:
             acl_find = [i for i in conf if i.startswith(f'acl {acl} ')]
-        acl_facts['name'] = acl_find[0].split(' ')[1]
-        acl_facts['type'] = acl_find[0].split(' ')[2]
-        acl_facts['vals'] = [i.split(' ')[3:] for i in acl_find]
+        if acl_find:
+            acl_facts['name'] = acl_find[0].split()[1]
+            acl_facts['type'] = acl_find[0].split()[2]
+            acl_facts['vals'] = [i.split()[3:] for i in acl_find]
+        else:
+            acl_facts['name'] = acl
+            acl_facts['type'] = 'both'
+            acl_facts['vals'] = []
     else:
         acl_facts = {
             'name': 'all', 'type': 'both', 'vals': 'any', 'tags': 'all'
@@ -81,14 +86,15 @@ def squid_acl_check(acl, conf):
 def squid_rule_check(conf):
     squid_rules = [
         dict(
-            action=i.split(' ')[1].upper(),
-            acls=i.split(' ')[2:]) for i in conf
+            action=i.split()[1].upper(),
+            acls=i.split()[2:]) for i in conf
         if i.startswith('http_access')
         if not i.count(' manager')
         if not i.count('localhost'.lower())
         # if not i.count(' CONNECT ')
     ]
     for rule in squid_rules:
+        rule['acls'] = [acl.split('#')[0].strip() for acl in rule['acls']]
         for acl in rule['acls']:
             if squid_acl_check(acl, conf)['type'].startswith('src'):
                 rule['src'] = squid_acl_check(acl, conf)
@@ -106,12 +112,12 @@ def dante_rule_check(conf):
     socks_rules = []
     for x, i in enumerate(conf):
         if (i.count('pass {') or i.count('block {')) and not i.startswith('#'):
-            src_net = conf[x+1].split('from: ')[1].split(' ')[0]
+            src_net = conf[x+1].split('from: ')[1].split()[0]
             src_bg = [
                 bg for bg, net in VDC_NETS.items() if ip_network(
                     src_net, strict=False).subnet_of(ip_network(net))
             ]
-            dst_net = conf[x+1].split('to: ')[1].split(' ')[0]
+            dst_net = conf[x+1].split('to: ')[1].split()[0]
             if i.startswith('socks'):
                 socks_rules.append(dict())
                 s = len(socks_rules) - 1
@@ -126,7 +132,7 @@ def dante_rule_check(conf):
                 socks_rules[s]['DST'] = dst_net
                 if conf[x+1].count('port: '):
                     socks_rules[s]['DST_port'] = (
-                        conf[x+1].split('port: ')[1].split(' ')[0]
+                        conf[x+1].split('port: ')[1].split()[0]
                     )
                 else:
                     socks_rules[s]['DST_port'] = 'ANY'
@@ -146,7 +152,7 @@ def dante_rule_check(conf):
                 client_rules[c]['DST'] = dst_net
                 if conf[x+1].count('port: '):
                     client_rules[c]['DST_port'] = (
-                        conf[x+1].split('port: ')[1].split(' ')[0]
+                        conf[x+1].split('port: ')[1].split()[0]
                     )
                 else:
                     client_rules[c]['DST_port'] = 'ANY'
