@@ -103,13 +103,15 @@ def squid_rule_check(conf):
     for rule in squid_rules:
         rule['acls'] = [acl.split('#')[0].strip() for acl in rule['acls']]
         for acl in rule['acls']:
-            if squid_acl_check(acl, conf)['type'].startswith('src'):
+            acl_facts = squid_acl_check(acl, conf)
+            acl_type = acl_facts['type']
+            if acl_type.startswith('src'):
                 rule['src'] = squid_acl_check(acl, conf)
-            if squid_acl_check(acl, conf)['type'].startswith('dst'):
+            if acl_type.startswith('dst'):
                 rule['dst'] = squid_acl_check(acl, conf)
-            if squid_acl_check(acl, conf)['type'].startswith('port'):
+            if acl_type.startswith('port'):
                 rule['dst_port'] = squid_acl_check(acl, conf)
-            if squid_acl_check(acl, conf)['type'].startswith('method'):
+            if acl_type.startswith('method'):
                 rule['http_method'] = squid_acl_check(acl, conf)
     return squid_rules
 
