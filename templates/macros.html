@@ -19,8 +19,8 @@
     <div id="collapse{{ type }}{{ index }}" class="collapse{% if expanded %} show{% endif %}" role="tabpanel" aria-labelledby="heading{{ type }}{{ index }}">
       <div class="card-body">
         {% if section %}
-          {% for j in section.get('vals', []) %}
-            {{ " ".join(j) }}<br>
+          {% for value in section.get('vals', []) %}
+            {{ " ".join(value) }}<br>
           {% endfor %}
         {% endif %}
       </div>
@@ -34,16 +34,16 @@
   <td scope="row">{{ index + 1 }}</td>
   <th scope="row">{{ rule['action'] }}</th>
   <td>
-    {{ render_section(rule.get('src', {}), index, 'Src', expanded=False) }}
+    {{ render_section(rule.get('src', {}), index, 'Src') }}
   </td>
   <td>
-    {{ render_section(rule.get('dst', {}), index, 'Dst', expanded=False) }}
+    {{ render_section(rule.get('dst', {}), index, 'Dst') }}
   </td>
   <td>
-    {{ render_section(rule.get('dst_port', {}), index, 'DstPort', expanded=False) }}
+    {{ render_section(rule.get('dst_port', {}), index, 'DstPort') }}
   </td>
   <td>
-    {{ render_section(rule.get('http_method', {}), index, 'HttpMethod', expanded=False) }}
+    {{ render_section(rule.get('http_method', {}), index, 'HttpMethod') }}
   </td>
 </tr>
 {% endmacro %}
