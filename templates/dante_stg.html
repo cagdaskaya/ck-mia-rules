@@ -20,7 +20,7 @@
     </thead>
     <tbody>
       {% for x, i in enumerate(client_stg_rules) %}
-        {{ render_dante_rule(i, x) }}
+        {{ render_dante_rule(i, x, 'client') }}
       {% endfor %}
     </tbody>
   </table>
@@ -44,7 +44,7 @@
     </thead>
     <tbody>
       {% for x, i in enumerate(socks_stg_rules) %}
-        {{ render_dante_rule(i, x) }}
+        {{ render_dante_rule(i, x, 'socks') }}
       {% endfor %}
     </tbody>
   </table>

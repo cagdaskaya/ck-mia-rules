@@ -48,12 +48,12 @@
 </tr>
 {% endmacro %}
 
-{% macro render_dante(section, index, type, expanded=False) %}
+{% macro render_dante(section, index, type, table, expanded=False) %}
 <div id="accordion" role="tablist">
   <div class="card">
-    <div class="card-header" role="tab" id="heading{{ type }}{{ index }}">
+    <div class="card-header" role="tab" id="heading{{ type }}{{ index }}{{ table }}">
       <h5 class="mb-0">
-        <a data-toggle="collapse" href="#collapse{{ type }}{{ index }}" aria-expanded="{{ 'true' if expanded else 'false' }}" aria-controls="collapse{{ type }}{{ index }}">
+        <a data-toggle="collapse" href="#collapse{{ type }}{{ index }}{{ table }}" aria-expanded="{{ 'true' if expanded else 'false' }}" aria-controls="collapse{{ type }}{{ index }}{{ table }}">
           {% if section %}
             {{ section[0] }}
           {% else %}
@@ -62,7 +62,7 @@
         </a>
       </h5>
     </div>
-    <div id="collapse{{ type }}{{ index }}" class="collapse{% if expanded %} show{% endif %}" role="tabpanel" aria-labelledby="heading{{ type }}{{ index }}">
+    <div id="collapse{{ type }}{{ index }}{{ table }}" class="collapse{% if expanded %} show{% endif %}" role="tabpanel" aria-labelledby="heading{{ type }}{{ index }}{{ table }}">
       <div class="card-body">
         {% if section %}
           {% for value in section %}
@@ -75,21 +75,21 @@
 </div>
 {% endmacro %}
 
-{% macro render_dante_rule(rule, index) %}
+{% macro render_dante_rule(rule, index, table) %}
 <tr>
   <td scope="row">{{ index + 1 }}</td>
   <th scope="row">{{ rule['action'] }}</th>
   <td>
-    {{ render_dante(rule.get('SRC', {}), index, 'Src') }}
+    {{ render_dante(rule.get('SRC', {}), index, 'Src', table) }}
   </td>
   <td>
-    {{ render_dante(rule.get('DST', {}), index, 'Dst') }}
+    {{ render_dante(rule.get('DST', {}), index, 'Dst', table) }}
   </td>
   <td>
-    {{ render_dante(rule.get('DST_port', {}), index, 'DstPort') }}
+    {{ render_dante(rule.get('DST_port', {}), index, 'DstPort', table) }}
   </td>
   <td>
-    {{ render_dante(rule.get('command', {}), index, 'Command') }}
+    {{ render_dante(rule.get('command', {}), index, 'Command', table) }}
   </td>
 </tr>
 {% endmacro %}
