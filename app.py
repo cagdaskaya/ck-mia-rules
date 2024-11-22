@@ -54,10 +54,17 @@ def update_contents(template: str):
         'Accept': 'application/vnd.github.v3.raw',
         'Authorization': f'Bearer {token}'
     }
-    response = requests.get(url, headers=headers).text
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching template: {e}")
+        return []
+
+    content = response.text
     with open(template, 'w') as f:
-        f.write(response)
-    return [i.strip() for i in response.split('\n')]
+        f.write(content)
+    return [i.strip() for i in content.split('\n')]
 
 
 def squid_acl_check(acl, conf):
