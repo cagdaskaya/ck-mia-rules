@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% from 'macros.html' import render_dante_rule %}
 {% block content %}
   
 <div class="lead container-fluid">
@@ -20,14 +20,7 @@
     </thead>
     <tbody>
       {% for x, i in enumerate(client_prd_rules) %}
-        <tr>
-          <td> {{ x + 1 }} </td>
-          <td> {{ i['action'] }} </td>
-          <td> {{ i['SRC'] }} </td>
-          <td> {{ i['DST'] }} </td>
-          <td> {{ i['DST_port'] }} </td>
-          <td>  </td>
-        </tr>
+          {{ render_dante_rule(i, x) }}
       {% endfor %}
     </tbody>
   </table>
@@ -51,14 +44,7 @@
     </thead>
     <tbody>
       {% for x, i in enumerate(socks_prd_rules) %}
-        <tr>
-          <td> {{ x + 1 }} </td>
-          <td> {{ i['action'] }} </td>
-          <td> {{ i['SRC'] }} </td>
-          <td> {{ i['DST'] }} </td>
-          <td> {{ i['DST_port'] }} </td>
-          <td> {{ i['command'] }} </td>
-        </tr>
+        {{ render_dante_rule(i, x) }}
       {% endfor %}
     </tbody>
   </table>
