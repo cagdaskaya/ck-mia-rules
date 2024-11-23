@@ -10,7 +10,7 @@
             {% elif rule_type.startswith('squid') %}
               {{ section.get('name', 'Unknown') }}
             {% else %}
-              {{ section.get('vals', ['EMPTY'])[0] }}
+              {{ (section.get('vals', ['EMPTY']) | sort)[0] }}
             {% endif %}
           {% else %}
             ANY
@@ -21,7 +21,7 @@
     <div id="collapse{{ type }}{{ index }}{{ rule_type }}" class="collapse{% if expanded %} show{% endif %}" role="tabpanel" aria-labelledby="heading{{ type }}{{ index }}{{ rule_type }}">
       <div class="card-body">
         {% if section %}
-          {% for value in section.get('vals', []) %}
+          {% for value in section.get('vals', []) | sort %}
             {{ value }}<br>
           {% endfor %}
         {% endif %}

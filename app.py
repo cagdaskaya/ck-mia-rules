@@ -9,7 +9,7 @@ app = Flask(__name__)
 # app.jinja_env.lstrip_blocks = False
 # app.jinja_env.trim_blocks = False
 
-VDC_NETS = {
+NET_NAME = {
     '10.234.14.0/24': 'cdpvdc-bri',
     '10.234.78.0/24': 'cdpvdc-slo',
     '10.234.33.176/29': 'mia-prd-bri',
@@ -37,7 +37,14 @@ VDC_NETS = {
     '10.234.31.112/28': 'vodcm-stg-bri',
     '10.234.104.112/28': 'vodcm-stg-slo',
     '10.234.79.0/28': 'vso-prd-slo',
-    '10.234.99.0/25': 'vso-stg-slo'
+    '10.234.99.0/25': 'vso-stg-slo',
+    '192.168.169.58/32': 'epg',
+    '192.168.169.191/32': 'epg',
+    '10.207.121.110/32': 'epg',
+    '10.213.20.55/32': 'epg',
+    '10.220.1.56/32': 'epg',
+    '10.207.40.46/32': 'epg',
+    '10.194.48.0/23': 'lmt'
 }
 
 
@@ -152,10 +159,46 @@ def squid_rule_check(conf):
     return squid_rules
 
 
+def enrich_network_list(network_list, net_name_dict):
+    """
+    Enriches a list of network addresses with corresponding names from a
+    dictionary.
+
+    Args:
+        network_list (list of str): A list of network addresses in string
+                                    format.
+        net_name_dict (dict): A dictionary where keys are network addresses
+                              (in string format) and values are corresponding
+                              names.
+
+    Returns:
+        list of str: A list of network addresses, where each address is
+                     optionally followed by a comment with the corresponding
+                     name from the dictionary.
+                     If a network address cannot be parsed, it is included
+                     as-is.
+    """
+    enriched_list = []
+    for net in network_list:
+        try:
+            network = ip_network(net, strict=False)
+            bg = next(
+                (bg_name for net, bg_name in net_name_dict.items()
+                    if network.subnet_of(ip_network(net))),
+                None)
+            if bg:
+                enriched_list.append(f"{net} # {bg}")
+            else:
+                enriched_list.append(net)
+        except ValueError:
+            enriched_list.append(net)
+    return enriched_list
+
+
 def parse_dante_config(file_path):
     """
-    Parses a Dante configuration file and extracts rules into a structured
-    format.
+    Parses a Dante configuration file and extracts rules into a
+    structured format.
 
     Args:
         file_path (str): The path to the Dante configuration file.
@@ -163,25 +206,25 @@ def parse_dante_config(file_path):
     Returns:
         list: A list of dictionaries, each representing a parsed rule
         with the following keys:
-            - rule_type (str): The type of rule, either "client" or "socks".
-            - action (str): The action of the rule, either "ALLOW" or "DENY".
-            - SRC (dict): A dictionary with the source information, containing:
-                - type (str): Always "src".
-                - vals (list): A list of source addresses, potentially enriched
-                  with network names.
-            - DST (dict): A dictionary with the destination information,
-              containing:
-                - type (str): Always "dst".
-                - vals (list): A list of destination addresses.
-            - DST_port (dict): A dictionary with the destination port
-              information, containing:
-                - type (str): Always "port".
-                - vals (list): A list of destination ports, or ["ANY"]
-                  if not specified.
-            - command (dict): A dictionary with the command information,
-              containing:
-                - type (str): Always "command".
-                - vals (list): A list of commands, or ["n/a"] if not specified.
+            - rule_type (str): The type of the rule, either 'client' or
+              'socks'.
+            - action (str): The action of the rule, either 'ALLOW' or
+              'DENY'.
+            - SRC (dict): A dictionary with 'type' set to 'src' and
+              'vals' containing a list of enriched source addresses.
+            - DST (dict): A dictionary with 'type' set to 'dst' and
+              'vals' containing a list of enriched destination addresses.
+            - DST_port (dict): A dictionary with 'type' set to 'port' and
+              'vals' containing a list of destination ports.
+            - command (dict): A dictionary with 'type' set to 'command'
+              and 'vals' containing a list of commands.
+
+    Note:
+        - The function assumes that the configuration file contains rules
+          in a specific format.
+        - The function skips empty lines and comments.
+        - The function enriches network lists using the
+          `enrich_network_list` function and `NET_NAME` constant.
     """
     with open(file_path, 'r') as f:
         lines = f.readlines()
@@ -234,34 +277,45 @@ def parse_dante_config(file_path):
             command = (command_matches.group(1).split()
                        if command_matches else ["n/a"])
 
-            enriched_from_list = []
-            for src in from_list:
-                try:
-                    src_network = ip_network(src, strict=False)
-                    bg = next(
-                        (bg_name for net, bg_name in VDC_NETS.items()
-                         if src_network.subnet_of(ip_network(net))),
-                        None
-                    )
-                    if bg:
-                        enriched_from_list.append(f"{src} - {bg}")
-                    else:
-                        enriched_from_list.append(src)
-                except ValueError:
-                    enriched_from_list.append(src)
+            enriched_src_list = enrich_network_list(from_list, NET_NAME)
+            enriched_dst_list = enrich_network_list(to_list, NET_NAME)
 
             # Create a dictionary for each rule
             parsed_rules.append({
                 "rule_type": rule_type,
                 "action": action,
-                "SRC": {"type": "src", "vals": enriched_from_list},
-                "DST": {"type": "dst", "vals": to_list},
+                "SRC": {"type": "src", "vals": enriched_src_list},
+                "DST": {"type": "dst", "vals": enriched_dst_list},
                 "DST_port": {"type": "port", "vals": port},
                 "command": {"type": "command", "vals": command},
             })
             print(f'rule_type: {rule_type}')
 
     return parsed_rules
+
+
+def separate_rules(parsed_rules):
+    """
+    Separates parsed rules into socks rules and client rules.
+
+    Args:
+        parsed_rules (list): A list of dictionaries where each dictionary
+                             represents a rule with a "rule_type" key.
+
+    Returns:
+        tuple: A tuple containing two lists:
+               - socks_rules (list): A list of rules where "rule_type"
+                 is "socks".
+               - client_rules (list): A list of rules where "rule_type"
+                 is "client".
+    """
+    socks_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "socks"
+    ]
+    client_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "client"
+    ]
+    return socks_rules, client_rules
 
 
 @app.route('/')
@@ -331,12 +385,7 @@ def dante_prd_func():
     parsed_rules = parse_dante_config('sockd-prod.conf.j2')
 
     # Separate SOCKS and client rules
-    socks_rules = [
-        rule for rule in parsed_rules if rule["rule_type"] == "socks"
-    ]
-    client_rules = [
-        rule for rule in parsed_rules if rule["rule_type"] == "client"
-    ]
+    socks_rules, client_rules = separate_rules(parsed_rules)
 
     return render_template(
         'dante_prd.html',
@@ -361,12 +410,7 @@ def dante_stg_func():
     parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
 
     # Separate SOCKS and client rules
-    socks_rules = [
-        rule for rule in parsed_rules if rule["rule_type"] == "socks"
-    ]
-    client_rules = [
-        rule for rule in parsed_rules if rule["rule_type"] == "client"
-    ]
+    socks_rules, client_rules = separate_rules(parsed_rules)
 
     return render_template(
         'dante_stg.html',
