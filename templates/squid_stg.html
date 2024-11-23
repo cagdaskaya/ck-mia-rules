@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from 'macros.html' import render_squid_rule %}
+{% from 'macros.html' import render_rule %}
 {% block content %}
   
 <div class="bg-light container-fluid">
@@ -16,7 +16,7 @@
     </thead>
     <tbody>
       {% for x, i in enumerate(squid_stg_rules) %}
-        {{ render_squid_rule(i, x) }}
+        {{ render_rule(i, x) }}
       {% endfor %}
     </tbody>
   </table>

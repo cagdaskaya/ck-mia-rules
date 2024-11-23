@@ -79,10 +79,10 @@ def squid_acl_check(acl, conf):
         if acl_find:
             acl_facts['name'] = acl_find[0].split()[1]
             acl_facts['type'] = acl_find[0].split()[2]
-            acl_facts['vals'] = [i.split()[3:] for i in acl_find]
+            acl_facts['vals'] = [' '.join(i.split()[3:]) for i in acl_find]
         else:
             acl_facts['name'] = acl
-            acl_facts['type'] = 'both'
+            acl_facts['type'] = 'unknonwn'
             acl_facts['vals'] = []
     else:
         acl_facts = {
@@ -92,28 +92,30 @@ def squid_acl_check(acl, conf):
 
 
 def squid_rule_check(conf):
-    squid_rules = [
-        dict(
-            action=i.split()[1].upper(),
-            acls=i.split()[2:]) for i in conf
-        if i.startswith('http_access')
-        if not i.count(' manager')
-        if not i.count('localhost'.lower())
-        # if not i.count(' CONNECT ')
-    ]
-    for rule in squid_rules:
-        rule['acls'] = [acl.split('#')[0].strip() for acl in rule['acls']]
-        for acl in rule['acls']:
-            acl_facts = squid_acl_check(acl, conf)
-            acl_type = acl_facts['type']
-            if acl_type.startswith('src'):
-                rule['src'] = squid_acl_check(acl, conf)
-            if acl_type.startswith('dst'):
-                rule['dst'] = squid_acl_check(acl, conf)
-            if acl_type.startswith('port'):
-                rule['dst_port'] = squid_acl_check(acl, conf)
-            if acl_type.startswith('method'):
-                rule['http_method'] = squid_acl_check(acl, conf)
+    squid_rules = []
+    for line in conf:
+        if (line.startswith('http_access') and 
+                not line.count(' manager') and 
+                not line.count('localhost'.lower())):
+            parts = line.split()
+            action = parts[1].upper()
+            acls = parts[2:]
+            rule = {
+                "rule_type": "squid",
+                "action": action,
+            }
+            for acl in acls:
+                acl_facts = squid_acl_check(acl, conf)
+                acl_type = acl_facts['type']
+                if acl_type.startswith('src'):
+                    rule['SRC'] = acl_facts
+                elif acl_type.startswith('dst'):
+                    rule['DST'] = acl_facts
+                elif acl_type.startswith('port'):
+                    rule['DST_port'] = acl_facts
+                elif acl_type.startswith('method'):
+                    rule['HTTP_method'] = acl_facts
+            squid_rules.append(rule)
     return squid_rules
 
 
@@ -167,7 +169,7 @@ def parse_dante_config(file_path):
             to_list = to_matches.group(1).split() if to_matches else []
             port = port_matches.group(1).split() if port_matches else ["ANY"]
             command = (command_matches.group(1).split()
-                       if command_matches else None)
+                       if command_matches else ["n/a"])
 
             enriched_from_list = []
             for src in from_list:
@@ -187,13 +189,14 @@ def parse_dante_config(file_path):
 
             # Create a dictionary for each rule
             parsed_rules.append({
-                "type": rule_type,
+                "rule_type": rule_type,
                 "action": action,
-                "SRC": enriched_from_list,
-                "DST": to_list,
-                "DST_port": port,
-                "command": command,
+                "SRC": {"type": "src", "vals": enriched_from_list},
+                "DST": {"type": "dst", "vals": to_list},
+                "DST_port": {"type": "port", "vals": port},
+                "command": {"type": "command", "vals": command},
             })
+            print(f'rule_type: {rule_type}')
 
     return parsed_rules
 
@@ -228,8 +231,12 @@ def dante_prd_func():
     parsed_rules = parse_dante_config('sockd-prod.conf.j2')
 
     # Separate SOCKS and client rules
-    socks_rules = [rule for rule in parsed_rules if rule["type"] == "socks"]
-    client_rules = [rule for rule in parsed_rules if rule["type"] == "client"]
+    socks_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "socks"
+    ]
+    client_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "client"
+    ]
 
     return render_template(
         'dante_prd.html',
@@ -245,8 +252,12 @@ def dante_stg_func():
     parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
 
     # Separate SOCKS and client rules
-    socks_rules = [rule for rule in parsed_rules if rule["type"] == "socks"]
-    client_rules = [rule for rule in parsed_rules if rule["type"] == "client"]
+    socks_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "socks"
+    ]
+    client_rules = [
+        rule for rule in parsed_rules if rule["rule_type"] == "client"
+    ]
 
     return render_template(
         'dante_stg.html',
