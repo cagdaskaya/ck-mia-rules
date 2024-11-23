@@ -69,6 +69,22 @@ def update_contents(template: str):
 
 
 def squid_acl_check(acl, conf):
+    """
+    Check and retrieve details about a Squid ACL from the configuration.
+
+    Args:
+        acl (str): The ACL name to check. If it starts with '!',
+            it indicates a negated ACL.
+        conf (list of str): The Squid configuration lines to search within.
+
+    Returns:
+        dict: A dictionary containing the following keys:
+            - 'name' (str): The name of the ACL.
+            - 'type' (str): The type of the ACL.
+            - 'vals' (list of str): The values associated with the ACL.
+            - 'tags' (str, optional): A tag indicating special conditions
+              (e.g., 'not' for negated ACLs).
+    """
     acl_facts = {}
     if acl != 'all':
         if acl.startswith('!'):
@@ -92,10 +108,27 @@ def squid_acl_check(acl, conf):
 
 
 def squid_rule_check(conf):
+    """
+    Parses a given Squid configuration and extracts rules related to
+    HTTP access.
+
+    Args:
+        conf (list of str): The Squid configuration lines.
+
+    Returns:
+        list of dict: A list of dictionaries where each dictionary
+        represents a Squid rule. Each rule dictionary contains:
+                - "rule_type": The type of rule (always "squid").
+                - "action": The action to be taken (e.g., "ALLOW" or "DENY").
+                - "SRC": Source ACL facts (if applicable).
+                - "DST": Destination ACL facts (if applicable).
+                - "DST_port": Destination port ACL facts (if applicable).
+                - "HTTP_method": HTTP method ACL facts (if applicable).
+    """
     squid_rules = []
     for line in conf:
-        if (line.startswith('http_access') and 
-                not line.count(' manager') and 
+        if (line.startswith('http_access') and
+                not line.count(' manager') and
                 not line.count('localhost'.lower())):
             parts = line.split()
             action = parts[1].upper()
@@ -120,6 +153,36 @@ def squid_rule_check(conf):
 
 
 def parse_dante_config(file_path):
+    """
+    Parses a Dante configuration file and extracts rules into a structured
+    format.
+
+    Args:
+        file_path (str): The path to the Dante configuration file.
+
+    Returns:
+        list: A list of dictionaries, each representing a parsed rule
+        with the following keys:
+            - rule_type (str): The type of rule, either "client" or "socks".
+            - action (str): The action of the rule, either "ALLOW" or "DENY".
+            - SRC (dict): A dictionary with the source information, containing:
+                - type (str): Always "src".
+                - vals (list): A list of source addresses, potentially enriched
+                  with network names.
+            - DST (dict): A dictionary with the destination information,
+              containing:
+                - type (str): Always "dst".
+                - vals (list): A list of destination addresses.
+            - DST_port (dict): A dictionary with the destination port
+              information, containing:
+                - type (str): Always "port".
+                - vals (list): A list of destination ports, or ["ANY"]
+                  if not specified.
+            - command (dict): A dictionary with the command information,
+              containing:
+                - type (str): Always "command".
+                - vals (list): A list of commands, or ["n/a"] if not specified.
+    """
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
@@ -203,11 +266,28 @@ def parse_dante_config(file_path):
 
 @app.route('/')
 def home():
+    """
+    Renders the home page template.
+
+    Returns:
+        A rendered HTML template for the home page.
+    """
     return render_template('index.html')
 
 
 @app.route('/squid/prd')
 def squid_prd_func():
+    """
+    Generates and renders the Squid production rules.
+
+    This function updates the contents of the 'squid-prod.conf.j2'
+    configuration file, checks the Squid rules based on the updated
+    configuration, and renders the 'squid_prd.html' template with the
+    Squid production rules.
+
+    Returns:
+        str: Rendered HTML template with Squid production rules.
+    """
     squid_prd_conf = update_contents('squid-prod.conf.j2')
     squid_prd_rules = squid_rule_check(squid_prd_conf)
     return render_template(
@@ -217,6 +297,17 @@ def squid_prd_func():
 
 @app.route('/squid/stg')
 def squid_stg_func():
+    """
+    Generates and renders the squid staging rules.
+
+    This function updates the contents of the 'squid-stage.conf.j2'
+    configuration file, checks the squid rules based on the updated
+    configuration, and then renders the 'squid_stg.html' template with
+    the squid staging rules.
+
+    Returns:
+        str: The rendered HTML template with the squid staging rules.
+    """
     squid_stg_conf = update_contents('squid-stage.conf.j2')
     squid_stg_rules = squid_rule_check(squid_stg_conf)
     return render_template(
@@ -226,6 +317,15 @@ def squid_stg_func():
 
 @app.route('/dante-prd')
 def dante_prd_func():
+    """
+    Parses the Dante configuration file, separates the rules into SOCKS
+    and client rules, and renders the 'dante_prd.html' template with
+    the parsed rules.
+
+    Returns:
+        str: Rendered HTML template with SOCKS and client rules.
+
+    """
     # Parse the configuration file
     update_contents('sockd-prod.conf.j2')
     parsed_rules = parse_dante_config('sockd-prod.conf.j2')
@@ -248,6 +348,15 @@ def dante_prd_func():
 
 @app.route('/dante-stg')
 def dante_stg_func():
+    """
+    Parses the Dante configuration file and separates the rules into SOCKS
+    and client rules. Renders the 'dante_stg.html' template with the
+    separated rules.
+
+    Returns:
+        str: Rendered HTML template with SOCKS and client rules.
+
+    """
     # Parse the configuration file
     parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
 
