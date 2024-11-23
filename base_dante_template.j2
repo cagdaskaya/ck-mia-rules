@@ -1,0 +1,52 @@
+### DANTE CONFIG ###
+
+## Server configuration, which should be placed in a file readable by the server, typically as /etc/sockd.conf.
+
+#logging
+errorlog: syslog /var/log/sockd.errlog
+logoutput: syslog /var/log/sockd.log
+#debug: 2
+
+#server address specification
+internal: {{ sockd_internal }} port = {{ sockd_port }}
+external: {{ sockd_external }}
+
+#server identities (not needed on solaris)
+#user.privileged: root
+user.notprivileged: sockd
+#user.libwrap: libwrap
+
+#reverse dns lookup
+#srchost: nodnsmismatch
+
+#authentication methods
+clientmethod: none
+socksmethod: none
+
+##
+## SOCKS client access rules
+##
+# rule processing stops at the first match, no match results in blocking
+
+{% for rule in client_rules %}
+client {{ rule.action.lower() }} {
+    from: {{ rule.SRC.vals | join(' ') }}
+    to: {{ rule.DST.vals | join(' ') }}
+    port: {{ rule.DST_port.vals | join(' ') }}
+    command: {{ rule.command.vals | join(' ') }}
+}
+{% endfor %}
+
+##
+## SOCKS server access rules
+##
+# rule processing stops at the first match, no match results in blocking
+
+{% for rule in socks_rules %}
+socks {{ rule.action.lower() }} {
+    from: {{ rule.SRC.vals | join(' ') }}
+    to: {{ rule.DST.vals | join(' ') }}
+    port: {{ rule.DST_port.vals | join(' ') }}
+    command: {{ rule.command.vals | join(' ') }}
+}
+{% endfor %}
