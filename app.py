@@ -49,6 +49,31 @@ NET_NAME = {
 
 
 def update_contents(template: str):
+    """
+    Fetches the content of a template file from a GitHub repository and updates
+    the local file.
+
+    Args:
+        template (str): The name of the template file to be fetched and
+                        updated.
+
+    Returns:
+        list: A list of strings, each representing a line in the fetched
+              template file.
+
+    Raises:
+        requests.exceptions.RequestException: If there is an error while
+                                              fetching the template from
+                                              GitHub.
+
+    Notes:
+        - The function determines the appropriate shim based on the template
+          name.
+        - The GitHub API token is retrieved from the environment variable
+          'GIT_TOKEN'.
+        - The fetched content is written to a local file with the same name as
+          the template.
+    """
     if template.startswith('squid'):
         shim = 'squid'
     elif template.startswith('sockd'):
@@ -147,13 +172,13 @@ def squid_rule_check(conf):
             for acl in acls:
                 acl_facts = squid_acl_check(acl, conf)
                 acl_type = acl_facts['type']
-                if acl_type.startswith('src'):
+                if (acl_type.startswith('src')):
                     rule['SRC'] = acl_facts
-                elif acl_type.startswith('dst'):
+                elif (acl_type.startswith('dst')):
                     rule['DST'] = acl_facts
-                elif acl_type.startswith('port'):
+                elif (acl_type.startswith('port')):
                     rule['DST_port'] = acl_facts
-                elif acl_type.startswith('method'):
+                elif (acl_type.startswith('method')):
                     rule['HTTP_method'] = acl_facts
             squid_rules.append(rule)
     return squid_rules
@@ -235,18 +260,39 @@ def parse_dante_config(file_path):
     # Step 1: Serialize multiline rules into one-liners
     for line in lines:
         line = line.strip()
-        if (not line or line.startswith("#")):
-            continue  # Skip empty lines, comments etc..
-        if line.endswith("{"):
+
+        # Skip empty lines and comments
+        if not line or line.startswith("#"):
+            continue
+
+        # Check if the line starts with valid rule types and actions
+        valid_start = line.startswith(
+            ("socks pass", "socks block", "client pass", "client block")
+        )
+        if not valid_start and not current_rule:
+            continue
+        # Handle single-line rules (starting and ending on the same line)
+        if valid_start and "{" in line and "}" in line:
+            serialized_rules.append(line)
+            continue
+        # If the line contains an opening brace, start capturing the rule
+        if "{" in line and not current_rule:
             current_rule = [line]
-        elif line.endswith("}"):
+        # If the line contains a closing brace, finalize the current rule
+        elif "}" in line and current_rule:
             current_rule.append(line)
-            serialized_rules.append(" ".join(current_rule))
+            serialized_rules.append(
+                " ".join(current_rule).replace("\n", " ").replace("\t", " ")
+            )
             current_rule = []
+        # If within a block, keep appending to the current rule
         elif current_rule:
             current_rule.append(line)
-    parsed_rules = []
+        # Handle single-line rules without braces
+        else:
+            serialized_rules.append(line)
 
+    parsed_rules = []
     # Step 2: Parse serialized rules
     for rule in serialized_rules:
         rule_type = "client" if rule.startswith("client") else (
@@ -289,7 +335,6 @@ def parse_dante_config(file_path):
                 "DST_port": {"type": "port", "vals": port},
                 "command": {"type": "command", "vals": command},
             })
-            print(f'rule_type: {rule_type}')
 
     return parsed_rules
 
@@ -383,6 +428,7 @@ def dante_prd_func():
     # Parse the configuration file
     update_contents('sockd-prod.conf.j2')
     parsed_rules = parse_dante_config('sockd-prod.conf.j2')
+    # parsed_rules = parse_dante_config('short_sockd-prod.conf.j2')
 
     # Separate SOCKS and client rules
     socks_rules, client_rules = separate_rules(parsed_rules)
@@ -407,7 +453,9 @@ def dante_stg_func():
 
     """
     # Parse the configuration file
-    parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
+    update_contents('sockd-stage.conf.j2')
+    parsed_rules = parse_dante_config('sockd-stage.conf.j2')
+    # parsed_rules = parse_dante_config('short_sockd-stage.conf.j2')
 
     # Separate SOCKS and client rules
     socks_rules, client_rules = separate_rules(parsed_rules)

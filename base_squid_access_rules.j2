@@ -1,0 +1,64 @@
+### SQUID {{ ENV }} ACCESS CONTROL CONFIGURATION ###
+
+### ACCESS CONTROL LISTS ###
+
+## ACLs are defined here.
+## The first part of the rule is the name, next is the type of ACL, 
+## and the last part is the values like CIDRs, domains, ports etc.
+
+### HTTP METHOD ACLS ###
+
+{% for acl_name, acl_list in acls.items() %}
+{% for acl in acl_list %}
+{% if acl.type == 'method' %}
+acl {{ acl_name }} {{ acl.type }} {{ acl.value }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+
+### PORT ACLS ###
+
+{% for acl_name, acl_list in acls.items() %}
+{% for acl in acl_list %}
+{% if acl.type == 'port' %}
+acl {{ acl_name }} {{ acl.type }} {{ acl.value }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+
+### SOURCE ACLS / INTERNAL SUBNETS ###
+
+{% for acl_name, acl_list in acls.items() %}
+{% for acl in acl_list %}
+{% if acl.type == 'src' %}
+acl {{ acl_name }} {{ acl.type }} {{ acl.value }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+
+### DESTINATION ACLS / EXTERNAL SUBNETS/DOMAINS ###
+
+{% for acl_name, acl_list in acls.items() %}
+{% for acl in acl_list %}
+{% if acl.type == 'dst' %}
+{% if acl.value | regex_search('^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]).){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])(/(3[0-2]|[1-2]{0,1}[0-9])){0,1}$') %}
+acl {{ acl_name }} dst {{ acl.value }}
+{% else %}
+acl {{ acl_name }} dstdomain {{ acl.value }}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+
+### ACCESS RULES ###
+
+## Rules are defined here. Rule processing stops at the first match.
+## The first part of the rule is the action, the second part is the ACLs to apply the action to
+
+{% for rule in rules %}
+http_access {{ rule.action }} {{ rule.acl }}
+{% endfor %}
